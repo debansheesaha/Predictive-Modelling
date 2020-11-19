@@ -1,0 +1,58 @@
+---
+title: "Assignment 4 - Time Series"
+author: "Saha Debanshee Gopal"
+date: "November 29, 2016"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+#Question 1.
+```{r}
+#White noise and moving average plot for 500 observations:
+w = rnorm(500,0,1) #500 N(0,1) variates
+v = filter(w, sides=2, rep(1/3,3)) #moving average
+par(mfrow=c(2,1)) 
+plot.ts(w, main="White noise", ylab="")
+plot.ts(v, main="Moving average", ylab="")
+
+#White noise and moving average plot for 50 observations:
+w = rnorm(500,0,1) #500 N(0,1) variates
+v = filter(w, sides=2, rep(1/3,3)) #moving average
+par(mfrow=c(2,1)) 
+plot.ts(w, main="White noise", ylab="")
+plot.ts(v, main="Moving average", ylab="")
+
+#Comparison
+par(mfrow=c(2,1)) # Plot the graphs in 2 rows, 1 column
+wa = rnorm(500, 0,1) # 500 white noise observations
+acf(wa,20,  # Plot and print the results for part a
+    main = "Series of n=500 Gaussian White Noise Observations")
+wb = rnorm(50, 0,1) # 500 white noise observations
+acf(wb,20,  # Plot and print the results for part a
+    main = "Series of n=50 Gaussian White Noise Observations")
+```
+## The range of lag is bigger for smaller n.
+
+#Question 2.
+```{r}
+library(astsa)             
+data()                     
+so2
+plot(so2, ylab="so2 level", main="so2 level for LA pollution study")
+plot(so2, type="o", col="blue", lty="dashed")
+plot(diff(log(so2)), main="logged and diffed")
+acf2(so2)
+```
+##The data given is for everyday from year 1970 to 1980 while we need it to be monthly, Multiply the lag with 30 days makes it a month and acf and pacf values of the corresponding data show that the model is ARIMA(2,0,0)
+##The AIC values support the hypothesis.
+```{r}
+sarima(so2,2,0,0)
+sarima.for(so2, 4, 2, 0, 0)
+library(forecast)
+fit <- arima(so2,c(2,0,0))
+forecast_preds <- forecast.Arima(fit, h = 4)
+plot(forecast_preds, xlim = c(1978,1980))
+forecast_preds
+```

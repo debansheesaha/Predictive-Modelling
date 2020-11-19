@@ -1,0 +1,506 @@
+---
+title: "Predictive Modelling DS 432 - Assignment 1"
+author: "Saha Debanshee Gopal"
+date: "28th September 2016"
+output: pdf_document
+---
+
+```{r setup, include=FALSE,warning=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#Loan Defaulters
+
+##Introduction 
+A bank is a place where people go for loans. A problem every bank encounters is the the repayment of loans by a customer. A bank wants to weed out such loan applicants on the basis of previous data and successfully avoid dealing with such defaulters.
+
+##Challenge 
+Whenever an applicant applies for a loan, based on the history of customers, we should be able to predict whether the applicant will be successfully be able to pay the loan or not. 
+\newpage
+
+##Business Understanding 
+
+###Background Information 
+The bank judges the applicant based on the 5 C's of credit.Its used to gauge the credibility of the potential borrowers. The system judges the applicants on 5 factors. They are - \newline
+- Character or credit history \newline
+- Capacity \newline
+- Capital (Down Payment) \newline
+- Collateral \newline
+- Conditions \newline
+
+In addition to examining income, lenders look at the number of years an applicant has been at his job and job stability.
+
+###Problem description 
+The bank wants to reduce the "default" and try and examine if an applicant will be able to repay the loan or not.The bank thus, wants to generate a profile for the defaulters or parameters that results in applicants not repaying the loan.
+
+###Success Criteria 
+To model the profile of a defaulter based on certain parameters and past data
+
+###Data Mining Goals 
+With the given data, \newline
+- Determine what kind of candidate would or would not return the loan.\newline
+- Profile defaulters\newline
+- Predict, given the data, whether an applicant would default or not.\newline
+\newpage
+
+##Data Understanding 
+Source of data : BankBayesLaon.txt
+
+### Data Description Report 
+The data set contains 850 observations of 9 variables. \newline
+The target variable is "defualt".
+
+#### Data Quantity
+Characteristics -
+```{r warning=FALSE,echo=FALSE,message=FALSE}
+library(xlsx)
+library(rJava)
+library(gdata)
+bank <- read.xlsx("C:/Users/hp/Desktop/BankData.xlsx",1)
+row.has.na <- apply(bank, 1, function(x){any(is.na(x))})
+bank1 <- bank[!row.has.na,]
+str(bank)
+```
+
+```{r echo=FALSE}
+for(i in c(2)){
+  bank1[,i] <- factor(bank1[,i])
+}
+```
+#### Data quality
+Statistics - 
+```{r warning=FALSE,echo=FALSE,message=FALSE}
+summary(bank1)
+class0 <- bank1[bank1$default == 0, ]
+nrow(class0)
+class1 <-bank1[bank1$default ==1,]
+nrow(class1)
+ranuni <- sample(x=c("Training","Testing"),size= nrow(bank1), replace= T, prob= c(0.7,0.3))
+Trngdt <- bank1[ranuni == "Training", ]
+Trclass0 <- Trngdt[Trngdt$default == 0, ]
+Trclass1 <- Trngdt[Trngdt$default == 1, ]
+Tstdt <- bank1[ranuni == "Testing",]
+#for glm function
+indvariables <- colnames(bank1[, 1:8])
+rhsofmodel <- paste(indvariables, collapse = "+")
+model <- paste("default ~", rhsofmodel)
+frml <- as.formula(model)
+class(frml)
+frml
+Training_model <- glm(formula= frml , data= Trngdt, family= "binomial")
+```
+
+
+Logistic Regression
+```{r warning=FALSE,echo=FALSE,message=FALSE}
+summary(Training_model)
+library(MASS)
+Training_model <- stepAIC(object = Training_model)
+```
+
+### Data Exploration Report 
+The above data gives us the relation between the target variable and the independent variables. The data shows that defaulters can be profile with the following formula. \newline
+default ~ employ + address + creddebt + debtinc
+\newline
+
+####Hypothesis formed 
+H0:Employment and Creddebt will have a significant effect on deafault.
+\newline
+Other characteristics about the data - \newline
+Address : The number of years at the current address plays a part in profiling a defaulter. \newline
+Debt to income ratio : The existing debt of the applicant to the ratio of his income is also plays a significant role in the profiling of a defaulter. \newline
+Age does not particularly have much impact on the fact that whether an applicant will churn or not.
+The credit card debt and the number of years the applicant has been working with the current employer are the significant attributes.
+
+###Graphs
+```{r, echo=FALSE}
+library(ggplot2)
+plot(bank1$default,bank1$employ,xlab = "default",ylab = "employ",main = "Years with Current Employer")
+```
+
+```{r, echo=FALSE}
+plot(bank1$default,bank1$address,xlab = "default",ylab = "address",main = "Years at Current Address")
+```
+
+```{r, echo=FALSE}
+plot(bank1$default,bank1$creddebt,xlab = "default",ylab = "creddebt",main = "Credit Card Debt in Thousands")
+```
+
+```{r, echo=FALSE}
+plot(bank1$default,bank1$debtinc,xlab = "default",ylab = "debtinc",main = "Debt to Income Ratio")
+```
+
+
+### Verifying Hypothesis
+
+```{r echo=FALSE}
+library(MKmisc)
+HLgof.test(fit=Training_model$fitted.values, obs= Training_model$y, verbose=T)
+```
+###H0 (Initial hypotheses): The model is a good fit.
+Since the p value is greater than 0.5, it proves that our initial hypotheses is right and that our model is a good fit.
+\newpage
+
+#Campaign Offers
+
+## Introduction 
+Banks like every other industry in the world today has competition. A bank wants to solve the problem of customer churn by offering the right offer on financial services to the customers. \newline
+
+## Challenge 
+The challenge is to identify the characteristic of customers who are most likely to respond to an offer based on the past data.
+\newpage
+
+## Business Understanding 
+
+### Background Information 
+
+The current business scenario needs to be analyzed in this situation :
+\newline
+Marketing campaigns are strategically important to any firm. However, satisfactory response rates from such marketing strategies have traditionally been a challenge. \newline
+Given that there are time and budget constraints on marketing strategies, it becomes a key focus area for any business wanting to improve its efficiency and market position.
+\newline
+Another challenge is the ever changing consumer behavior to such advertisements.\newline
+Customers want more out of the advertisements such as personalised greetingse etc.. The fact that today there are newer and more sophisticated ways of reaching out to the customer can add a significant burden on the marketing dollar. \newline
+The marketing campaigns need to be : \newline
+-Relevant : Making the right offer to the right person. \newline
+-Timely. \newline
+
+### Problem description 
+The bank wants to simply identify what offers to advertise to which customer based on data analytics.
+
+#### Business Success Criteria 
+To match campaign offers with the right customer profile to get the best response.
+
+#### Data Mining Goals 
+With the help of the data - \newline
+    - Profile and classify the customer as a right or a wrong candidate for an offer.
+    - Predicting which profile of customer will result in a positive response for the offer.
+\newpage
+
+## Data Understanding 
+
+### Data Description Report 
+
+#### Data Quantity
+Characteristics - 
+```{r echo=FALSE,warning=FALSE,message=FALSE}
+library(xlsx)
+library(openxlsx)
+
+bank<-read.xlsx("C:/Users/hp/Desktop/Train.xlsx")
+
+str(bank)
+```
+
+```{r echo=FALSE,warning=FALSE,message=FALSE}
+bank$response_date[which(is.na(bank$response_date))] <- mean(bank$response_date,na.rm =  TRUE)
+bank$purchase_date[which(is.na(bank$purchase_date))] <- mean(bank$purchase_date,na.rm =  TRUE)
+bank$product_id[which(is.na(bank$product_id))] <- mean(bank$product_id,na.rm =  TRUE)
+bank$age_youngest_child[which(is.na(bank$age_youngest_child))] <- mean(bank$age_youngest_child,na.rm =  TRUE)
+bank$months_current_account<-abs(bank$months_current_account)
+
+for(i in c(2,14,20)){
+  bank[,i] <- factor(bank[,i])
+}
+```
+###Summary after cleaning data
+```{r echo=FALSE,warning=FALSE,message=FALSE}
+summary(bank)
+class0 <- bank[bank$response == 0, ]
+class1 <-bank[bank$response ==1,]
+ranuni <- sample(x=c("Training","Testing"),size= nrow(bank), replace= T, prob= c(0.7,0.3))
+Trngdt <- bank[ranuni == "Training", ]
+Trclass0 <- Trngdt[Trngdt$response == 0, ]
+Trclass1 <- Trngdt[Trngdt$response == 1, ]
+Tstdt <- bank[ranuni == "Testing",]
+#for glm function
+indvariables <- colnames(bank[, c(1:2,4:31)])
+rhsofmodel <- paste(indvariables, collapse = "+")
+model <- paste("response ~", rhsofmodel)
+frmla <- as.formula(model)
+class(frmla)
+frmla
+```
+
+#### Data quality
+
+```{r echo=FALSE,warning=FALSE,message=FALSE}
+Training_model <- glm(formula= frmla , data= Trngdt)
+summary(Training_model)
+```
+### Data Mining Success Criteria
+
+```{r echo=FALSE,warning=FALSE,message=FALSE}
+library(MASS)
+Training_model <- stepAIC(object = Training_model)
+```
+
+### Data Exploration Report 
+The data shows us that the chances of a customer purchasing an offer is significantly affected by RFM score of the customer. \newline
+If a customer has purchased an offer before, he's more likely to purchase another one again. \newline
+The number of transactions of a customer show how active he/she is and this variable also plays a role in the sale of an offer. The more transactions there are, the more is the likelihood of the customer going for the offer. \newline
+Other than this, the income and the offer itself affect the response variable.
+```{r echo=FALSE,warning=FALSE,message=FALSE}
+library(ggplot2)
+par(mfrow=c(2,2))
+b <- bank$purchase
+d <- bank$number_transactions
+i <- bank$income
+j <- bank$rfm_score
+r <- bank$response
+```
+
+```{r echo=FALSE,warning=FALSE,message=FALSE}
+plot(r,b,xlab = "response",ylab = "purchases",main = "Purchases Made")
+```
+
+```{r echo=FALSE,warning=FALSE,message=FALSE}
+plot(r,d,xlab = "response",ylab = "transactions",main = "Number of transactions")
+```
+
+```{r echo=FALSE,warning=FALSE,message=FALSE}
+plot(r,i,xlab = "response",ylab = "income",main = "Income")
+```
+
+```{r echo=FALSE,warning=FALSE,message=FALSE}
+plot(r,j,xlab = "response",ylab = "rfm",main = "RFM Score")
+```
+
+### Verifying Data Quality 
+
+```{r echo=FALSE,warning=FALSE,message=FALSE}
+library(MKmisc)
+#The Hosmer and Lemeshow goodness of fit (GOF) test is a way to assess whether there is
+
+HLgof.test(fit=Training_model$fitted.values, obs= Training_model$y, verbose=T)
+#H0: Model is a good fit i.e it has good predective power
+```
+
+The model is not a good fit.
+\newpage
+
+#Retail Forecasting
+
+##Introduction
+A Retail company wants to forecast for the next four months the number of items that will be consumed by males. They wish to forecast the growth of their sales for Men's items into the future so that the company can get an idea of the future demand and use that for better production planning of its merchandize. In doing so, it can have a chance to both minimize the errors due to underproduction and having product shortages, or overproduction which will lead to excess stock that would lead to an additional cost. For this, they have engaged on a forecasting project based on time series analysis techniques.
+
+##Challenge.
+The objective of the catalog prediction exercise is to build a forecast for the number of items that will be consumed by men (male customers) in the next four months. The data is historic data for ten years, from 1989 to 1998.
+\newpage
+
+##Business 	Objectives:
+
+###Background	Information	
+
+In retail management, forecasting services are used to predict and meet the demands of consumers in retail establishments while controlling pricing and inventory. Holding excess inventory adds to overhead costs for a business. When forecasting helps the retailer to meet the demands of the customer by understanding consumer purchase patterns better, more efficient use of shelf and display space within the retail establishment is the result, in addition to optimal use of inventory space. \newline
+Close examination of the data will uncover trends in the months, days and times of day. The most obvious peaks and troughs are usually the seasons. Slighter trends can be caused by things like local events, weather, promotions or government announcements
+
+###Problem	description	
+The	retailer wants to forecast the nature and magnitude of demand in male clothing to optimize sales and maximize profit. \newline
+The	retailer also wants	to	identify	the	factors that can help increase demand, and customize them accordingly. \newline
+
+###Business	Success	Criteria
+To forecast demand for men's merchandise based on certain parameters and past data.
+
+###Data	Mining	Goals
+With	the	help	of the	data,	we translate	the retailer's	business objectives	into	data	mining	terms. \newline
+
+The	goals	for	the	initial study	to	be	completed	are: \newline
+a. Profiling: Use	the	data	given	to determine products that are likely to sell the most based on past customer behaviour.	\newline
+b. Predicting: Approximate sale of different families of products. \newline
+c. Documenting	of	technical	goals	using	specific	units	of	time, i.e	predictions	with	a	4-month	validity. \newline
+d. Attempting to	provide	actual	numbers	for	desired outcomes, such	as increase or decrease in demand in percent of various products for men.
+```{r echo=FALSE,message=FALSE,warning=FALSE}
+library(xlsx)
+time <- read.xlsx2("C:/Users/hp/Desktop/Catalog.xlsx",1)
+```
+
+##Data	Understanding	
+```{r echo=FALSE,message=FALSE,warning=FALSE}
+str(time)
+```
+
+###Data	Description	Report	
+There	are	2	ways	to	describe	the	data,	but	most	descriptions focus	on	the	quantity	and	quality	of	data.
+Data	Quantity
+KEY	CHARACTERISTICS	-
+```{r echo=FALSE,message=FALSE,warning=FALSE}
+data <- ts(time[,2], start = c(1989,1), frequency= 12)
+```
+
+```{r echo=FALSE,message=FALSE,warning=FALSE}
+plot(data, xlab="Years", ylab= "Sales")
+```
+
+###Data	quality
+Does	the	data	include	characteristics	relevant	to	the business	question?
+Basic	statistics	/	descriptive	statistics	for	the	data	need	to	be computed	and	any	insights	need	to	be	written	here.
+Prioritizing	the	relevant	attributes.
+
+```{r echo=FALSE,message=FALSE,warning=FALSE}
+#trend
+library(forecast)
+par(mfrow=c(2,2))
+ylim <- c(min(data),max(data))
+fit <-stl(data, s.window = "period")
+```
+
+```{r echo=FALSE,message=FALSE,warning=FALSE}
+plot(ma(data, 4), main="Simple Moving Averages(k=4)", ylim= ylim)
+plot(ma(data, 6), main="Simple Moving Averages(k=6)", ylim= ylim)
+plot(ma(data, 8), main="Simple Moving Averages(k=8)", ylim= ylim)
+plot(ma(data, 12), main="Simple Moving Averages(k=12)", ylim= ylim)
+```
+
+```{r echo=FALSE,message=FALSE,warning=FALSE}
+fit <-stl(data, s.window = "period")
+```
+
+
+```{r echo=FALSE,message=FALSE,warning=FALSE}
+plot(fit)
+fit$time.series
+monthplot(data, xlab="years", ylab="sales")
+seasonplot(data, year.labels = TRUE, main="season plot")
+```
+
+###Data	Mining Success Criteria
+
+Time Series Forcasting
+```{r echo=FALSE,message=FALSE,warning=FALSE}
+#Difference data to make data stationary on mean (remove trend)
+plot(diff(data),ylab="Differenced Sales")
+#series is not stationary on variance
+#perform log tranformation to make a series stationary on variance
+plot(log10(data),ylab="Log(Sales)")
+#this series is not stationary on mean since we are using the original data without differencing.
+plot(diff(log10(data)),ylab="Differenced Log (Sales)")
+#Plot ACF and PACF to identify potential AR and MA model
+par(mfrow = c(1,2))
+acf(ts(diff(log10(data))),main="ACF Sales")
+pacf(ts(diff(log10(data))),main="PACF Sales")
+```
+
+###Data	Exploration	Report
+```{r echo=FALSE,message=FALSE,warning=FALSE}
+ARIMAfit <- auto.arima(log10(data), approximation=FALSE,trace=FALSE)
+summary(ARIMAfit)
+```
+
+###Verifying	Data	Quality	
+```{r echo=FALSE,message=FALSE,warning=FALSE}
+#predict
+pred <- predict(ARIMAfit, n.ahead = 4)
+pred
+plot(data,type="l",xlim=c(1989,1998),ylim=c(1,1600),xlab = "Year",ylab = "Sales")
+
+
+par(mfrow=c(1,2))
+acf(ts(ARIMAfit$residuals),main="ACF Residual")
+pacf(ts(ARIMAfit$residuals),main="PACF Residual")
+#residuals are random.arima MODEL IS FINE.
+```
+The residuals are random implying that the model is fine.
+\newpage
+
+#Telecom Churn
+
+##Introduction
+Every firm has competition, and the market of telecommunications faces a huge problem regarding the churn of customers. Customers needs and behavior changes a lot and because of that fact, a customer might leave a company for another. A telecom firm wants to resolve this issue of telecom churn.
+
+##Challenge
+To analyse the data and profile probable "churners".
+\newpage
+
+##Business Understanding
+
+###Background information:
+
+The telecommunication companies face this problem of churning where a percentage of subscribers or customers switch to some other service and stop using the services of previous company after a certain period of time. \newline
+
+A company spends a lot of resources on each of its customers and employee, and hence wants to minimise the loss of customers and employee. This affects the overall profit of the company.
+
+###Problem Description
+The company wants to reduce the number of churners and examine if a customer will churn or not.The company thus, wants to identify the profile of the churner or parameters that result in a defaulter.
+
+###Business Success Criteria 
+The model the profile of a churner based on certain parameters and past data.
+
+ 
+```{r echo=FALSE,message=FALSE,warning=FALSE}
+library(xlsx)
+library(openxlsx)
+telco<-read.xlsx("C:/Users/hp/Desktop/Teleco.xlsx",1)
+str(telco)
+```
+
+###Summary after data cleaning
+```{r echo=FALSE,message=FALSE,warning=FALSE}
+row.has.na <- apply(telco, 1, function(x){any(is.na(x))})
+sum(row.has.na)
+library(zoo)
+gg <-na.aggregate(telco)
+summary(gg)
+class0 <- gg[gg$churn == 0, ]
+class1 <-gg[gg$churn ==1,]
+ranuni <- sample(x=c("Training","Testing"),size= nrow(gg), replace= T, prob= c(0.7,0.3))
+Trngdt <- gg[ranuni == "Training", ]
+Trclass0 <- Trngdt[Trngdt$churn == 0, ]
+Trclass1 <- Trngdt[Trngdt$churn == 1, ]
+Tstdt <- gg[ranuni == "Testing",]
+#for glm function
+indvariables <- colnames(gg[, c(1:41)])
+rhsofmodel <- paste(indvariables, collapse = "+")
+model <- paste("churn ~", rhsofmodel)
+frmla <- as.formula(model)
+class(frmla)
+frmla
+Training_model <- glm(formula= frmla , data= Trngdt, family= "binomial")
+summary(Training_model)
+library(MASS)
+Training_model <- stepAIC(object = Training_model)
+```
+
+##Data mining goals:
+
+Retention is one of the major goals of any telecom industry and therefore it is necessary to profile the "churners". \newline
+We analyze the data to determine what customer might churn and which customer will retain and be loyal to the company. \newline
+
+H0 : The churn is affected by the following variables - equipmon,equipten,wiremon,wireten.
+
+###Graphs
+```{r echo=FALSE}
+em <- gg$equipmon
+c <- gg$churn
+et <- gg$equipten
+wm <- gg$wiremon
+wt <- gg$wireten
+```
+
+```{r pressure, echo=FALSE,message=FALSE,warning=FALSE}
+library(ggplot2)
+plot(c,em,xlab="churn",ylab = "EquipMon")
+```
+
+```{r, echo=FALSE,message=FALSE,warning=FALSE}
+plot(c,et,xlab = "churn",ylab = "Equipten")
+```
+
+```{r, echo=FALSE,message=FALSE,warning=FALSE}
+plot(c,et,xlab = "churn",ylab = "Equipten")
+```
+
+```{r, echo=FALSE,message=FALSE,warning=FALSE}
+plot(c,et,xlab = "churn",ylab = "Equipten")
+```
+
+### Verifying Data Quality :
+
+```{r data_veri_telco,echo=FALSE,message=FALSE,warning=FALSE}
+library(MKmisc)
+#The Hosmer and Lemeshow goodness of fit (GOF) test is a way to assess whether there is
+
+HLgof.test(fit=Training_model$fitted.values, obs= Training_model$y, verbose=T)
+```
+
+The value of p is greater than 0.5,the model is a good fit

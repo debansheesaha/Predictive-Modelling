@@ -1,0 +1,449 @@
+---
+title: "Predictive Modelling DS432 - Regression"
+author: "Saha Debanshee Gopal - U101113FCS074"
+date: "4th October 2016"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+#Question 1
+##RegD1
+```{r echo = F,warning=F,message=F}
+reg2 <- read.table("C:/Users/hp/Desktop/RegD1.txt")
+t<-seq(1,nrow(reg2),10)
+tstdata <- reg2[t,]
+trndata <- reg2[-t,]
+indVariables <- colnames(reg2[,2:3]) 
+rhsOfModel <- paste(indVariables,collapse ="+")
+model <- paste("Y1 ~ ",rhsOfModel)
+frml <- as.formula(model)
+regression <- lm(formula = frml,data = trndata)
+summary(regression)
+```
+Model fit is not good. Transforming and re-evaluating.
+```{r echo = F,warning=F,message=F}
+#Transformations
+##Box-Cox plots on response
+library(MASS)
+ymin <- abs(min(trndata$Y1))
+model11 <- lm((trndata$Y1+ymin+0.5)~X1+X2,trndata)
+par(mfrow = c(2,2))
+boxcox(model11,plotit = T)
+bc <- boxcox(model11,plotit = T,lambda = seq(0.3,1.5,by=0.1))
+library(caret)
+pp<-preProcess(trndata,method = "BoxCox")$bc
+cook<-cooks.distance(regression)
+model1<-lm(Y1~X1+I(X2^pp$X2$lambda),trndata,subset = (cook<max(cook)))
+summary(model1)
+fmodel <- lm(Y1~X1,data = trndata)
+summary(fmodel)
+par(mfrow = c(2,2))
+plot(fmodel)
+```
+The variable X2 is eliminated using backward elimination
+```{r echo = F,warning=F,message=F}
+library(usdm)
+library(DAAG)
+vif(regression)
+```
+The VIF value is less than 5 implying low co-linearity
+\newline
+\newline
+Correlation 
+```{r echo = F,warning=F,message=F}
+pV <- predict.lm(object = fmodel,newdata = tstdata)
+cor(x=pV,y=tstdata$Y1)
+```
+##RegD2
+```{r echo=FALSE,warning=FALSE,message=F}
+library(usdm)
+library(DAAG)
+reg2 <- read.table("C:/Users/hp/Desktop/RegD2.txt")
+t<-seq(1,nrow(reg2),10)
+tstdata <- reg2[t,]
+trndata <- reg2[-t,]
+indVariables <- colnames(reg2[,2:4]) 
+rhsOfModel <- paste(indVariables,collapse ="+")
+model <- paste("Y1 ~ ",rhsOfModel)
+frml <- as.formula(model)
+regression <- lm(formula = frml,data = trndata)
+summary(regression)
+par(mfrow = c(2,2))
+plot(regression)
+regressionAIC <- step(regression)
+pV <- predict.lm(object = regression,newdata = tstdata)
+```
+The VIF value is less than 5 implying low co-linearity
+```{r echo=FALSE}
+vif(regression)
+```
+Correlation 
+```{r echo=FALSE}
+cor(x=pV,y=tstdata$Y1)
+```
+
+##RegD3
+```{r echo=FALSE,warning=FALSE}
+library(usdm)
+library(DAAG)
+reg2 <- read.table("C:/Users/hp/Desktop/RegD3.txt")
+t<-seq(1,nrow(reg2),10)
+tstdata <- reg2[t,]
+trndata <- reg2[-t,]
+indVariables <- colnames(reg2[,2:4]) 
+rhsOfModel <- paste(indVariables,collapse ="+")
+model <- paste("Y1 ~ ",rhsOfModel)
+frml <- as.formula(model)
+regression <- lm(formula = frml,data = trndata)
+summary(regression)
+par(mfrow = c(2,2))
+plot(regression)
+regressionAIC <- step(regression)
+pV <- predict.lm(object = regression,newdata = tstdata)
+```
+The VIF value is less than 5 implying low co-linearity
+```{r echo=FALSE}
+vif(regression)
+```
+Correlation 
+```{r echo=FALSE}
+cor(x=pV,y=tstdata$Y1)
+```
+\newpage
+
+#Question 2
+Summary of the data :
+```{r echo=F,warning=F}
+reg2 <- read.table("C:/Users/hp/Desktop/RegD6.txt")
+reg2 <- reg2[,c(9,1:8)]
+t<-seq(1,nrow(reg2),10)
+tstdata <- reg2[t,]
+trndata <- reg2[-t,]
+indVariables <- colnames(reg2[,2:9]) 
+rhsOfModel <- paste(indVariables,collapse ="+")
+model <- paste("Y ~ ",rhsOfModel)
+frml <- as.formula(model)
+regression <- lm(formula = frml,data = trndata)
+summary(regression)
+par(mfrow = c(2,2))
+plot(regression)
+regressionAIC <- step(regression)
+summary(regressionAIC)
+```
+
+##Data nature
+```{r echo=F,warning=F}
+library(lmtest) #variance assumption
+rest <- bptest(regressionAIC,studentize = FALSE)
+rest #heteroscedastic
+```
+The test shows that the data is heteroscedastic in nature. The residuals vs the fitted values graph suggests constant variance
+
+##Normality Test
+```{r echo=F,warning=F}
+shapiro.test(regressionAIC$residuals) #normality test
+```
+Given sample is normalzied
+
+##Leverage points
+```{r echo=F,warning=F}
+lm3.hat <- hatvalues(regressionAIC)
+id.lm3.hat <- which(lm3.hat > (2*(2+1)/nrow(reg2))) ##  hatvalue > #2*(k+1)/n
+lm3.hat[id.lm3.hat]
+```
+
+##Outliers
+```{r echo=F,warning=F}
+library(outliers)
+library(car)
+outlierTest(regressionAIC)
+outlier(reg2) #outliers gets the extreme most observation from the mean. If you set the argument opposite=TRUE, it fetches from the other side.
+```
+
+##Influential Points
+```{r echo=F,warning=F}
+infu <- influence.measures(regressionAIC)
+summary(infu)
+```
+
+##Condition Number
+```{r echo=F,warning=F}
+library(perturb)
+colldiag(regressionAIC)
+```
+
+##VIF
+```{r echo=F,warning=F}
+library(car)
+vif(regressionAIC)
+```
+VIF value if less than 5, implying low col
+
+##Correlaton
+```{r echo=F,warning=F}
+test <- predict.lm(object= regressionAIC, newdata = tstdata)
+cor(x= test, y = tstdata$Y)
+```
+Correlation value is high
+\newpage
+
+#Question 3
+```{r echo=FALSE,warning=F,message=F}
+reg2 <- read.table("C:/Users/hp/Desktop/RegD4.txt", header=TRUE, quote="\"")
+reg2 <- reg2[,c(4,1:3)]
+reg2
+indVariables <- colnames(reg2[,2:4]) 
+rhsOfModel <- paste(indVariables,collapse ="+")
+model <- paste("Y1 ~ ",rhsOfModel)
+frml <- as.formula(model)
+```
+
+##Least Squares
+```{r echo=F,messages=F,warning=F}
+regression <- lm(formula = frml,data = reg2)
+summary(regression)
+par(mfrow = c(2,2))
+plot(regression)
+```
+
+##Least Abosolute Deviations
+```{r echo=F,warning=F,message=F}
+library(L1pack)
+ladmod<-lad(frml,data=reg2,method = c("BR", "EM"))
+summary(ladmod)
+qqnorm(ladmod$residuals,main = "Residual value plot")  #qq plot
+qqline(ladmod$residuals)   #will draw a straight line
+```
+
+##Huber Method
+```{r echo=F,warning=F,message=F}
+hm<-rlm(frml,data=reg2)
+summary(hm)
+qqnorm(hm$residuals,main = "Residual value plot")  
+qqline(hm$residuals)   
+```
+
+##Least Trimmed Squares
+```{r echo=F,warning=F,message=F}
+lts <- ltsreg(frml,data=reg2)
+summary(lts)
+qqnorm(lts$residuals,main = "Residual value plot") 
+qqline(lts$residuals)
+```
+\newline
+The difference in the graph is shown in the graph which indicates a change in the line as well the distributed values in the plot of the residual values.
+
+##Result of Least Square after removal of outliers and influential points
+```{r echo=F,warnings=F,message=F}
+library(car)
+library(outliers)
+outlierTest(regression)
+outlier(reg2) #outliers gets the extreme most observation from the mean.
+#If you set the argument opposite=TRUE, it fetches from the other side.
+outlier(reg2,opposite = TRUE)
+#Influencial Points
+infu <- influence.measures(regression)
+summary(infu)
+confint(regression)
+newdata <- reg2[-c(17,21,16),]
+fmodel <- lm(frml,newdata)
+summary(fmodel)
+par(mfrow = c(2,2))
+plot(fmodel)
+```
+
+\newpage
+
+#Question 4
+##Before transformation
+```{r echo=F,warning=F,message=F}
+regD7 <- read.table("C:/Users/hp/Desktop/RegD7.txt", sep="")
+rhsOfModel <- "X3 +X4+ X5"
+model <- paste("Y ~ ",rhsOfModel)
+frml <- as.formula(model) 
+regression <- lm(formula= frml, data= regD7)
+summary(regression)
+par(mfrow = c(2,2))
+plot(regression)
+```
+
+##After transform
+```{r echo=F,warning=F,message=F}
+library(MASS)
+bx <- boxcox(regression,plotit = T)
+lambda<-bx$x[which.max(bx$y)]
+regressionBX<-lm(I(regD7$Y^lambda)~regD7$X3+regD7$X4+regD7$X5,data=regD7)
+summary(regressionBX)
+residuals <- resid(regressionBX) 
+par(mfrow = c(2,2))
+plot(regressionBX,which = 1)
+plot(regressionBX,which = 3)
+plot(regressionBX,which = 5)
+t<-seq(1,nrow(reg2),10)
+tstdata <- reg2[t,]
+trndata <- reg2[-t,]
+pV <- predict.lm(object= regressionBX, newdata = tstdata)
+cor(x= pV, y = regD7$Y)  
+plot(x= regD7$Y,y= pV, type= "p",xlab = "Y Values", ylab = "Predicted Values",main="Predicted Values vs Given Values")  
+```
+\newpage
+
+#Question 5
+##Backward Elimination
+```{r echo=F,warning=F,message=F}
+RegD8 <- read.table("C:/Users/hp/Desktop/RegD8.txt", sep="")
+t<-seq(1,nrow(RegD8),10)
+tstdata <- RegD8[t,]
+trndata <- RegD8[-t,]
+indVariables <- colnames(RegD8[,1:8])
+rhsOfModel <- paste(indVariables,collapse ="+")
+model <- paste("Y ~ ",rhsOfModel)
+frml <- as.formula(model) 
+TrainingModel <- lm(formula= frml, data= trndata)
+TrainingModel <- step(object= TrainingModel, direction="backward")
+summary(TrainingModel)    #ALL VAR(s) mentioned ARE IMPACTING THE Y VARIABLE
+par(mfrow = c(2,2))
+plot(TrainingModel)
+```
+The correlation is high, but Ra^2 is low.
+
+##AIC
+```{r echo=F,warning=F,message=F}
+TrainingModelAIC <- lm(formula= frml, data= RegD8)
+TrainingModelAIC <- step(object= TrainingModel, direction="both")
+summary(TrainingModelAIC)
+library(stats4)
+AIC(TrainingModelAIC)
+par(mfrow = c(2,2))
+plot(TrainingModel)
+```
+
+##AICC
+```{r echo=F,warning=F,message=F}
+TrainingModelAiCC <- lm(formula= frml, data= RegD8)
+library(AICcmodavg)
+TrainingModelAiCCInfo<-AICc(TrainingModelAiCC)
+summary(TrainingModelAiCCInfo)
+```
+
+##BIC
+```{r echo = F,message=F,warning=F}
+TrainingModelde <- lm(formula= frml, data= RegD8)
+# AIC alternate 
+library(stats4)
+aic_model1<-AIC(TrainingModelde)
+# BIC alternate
+library(stats)
+library(lme4)
+BIC(TrainingModelde)
+summary(BIC(TrainingModelde))
+```
+
+##R^2 & Ra^2
+```{r echo=F,warning=F,message=F}
+TrainingModelR <- lm(formula= frml, data= RegD8)
+summary(TrainingModelR)
+TrainingModelR <- step(object= TrainingModelR, direction="both")
+summary(TrainingModelR)    
+```
+R^2 = 0.65 & Ra^2 = 0.62
+
+##Mallows Cp
+```{r echo=F,message=F,warning=F}
+library(CombMSC)
+TrainingModelmalo <- lm(formula= frml, data= RegD8)
+summary(TrainingModelmalo)
+Cp(TrainingModelmalo,a = 1,b = 0, S2 = .03542)
+```
+In conclusion, the R^2 & Ra^2 is the best model determiner.
+
+\newpage
+
+#Question 6
+```{r echo=F,message=F,warning=F}
+regD <- read.table("C:/Users/hp/Desktop/RegD9.txt",header = TRUE)
+regD <- regD[,c(2,1,3:15)]
+t<-seq(1,nrow(regD),10)
+tstdata <- regD[t,]
+trndata <- regD[-t,]
+indVariables <- colnames(regD[,2:15]) # getting the independent variables
+rhsOfModel <- paste(indVariables,collapse ="+")
+model <- paste("Y ~ ",rhsOfModel)
+frml <- as.formula(model)
+```
+
+##Linear Regression with all predictors
+```{r echo=F,warning=F,message=F}
+regression <- lm(formula = frml,data = trndata)
+summary(regression)
+par(mfrow = c(2,2))
+plot(regression)
+vif(regression) #as a rule if VIF less than 5 is good, low collinearity
+pV <- predict.lm(object = regression,newdata = tstdata)
+cor(x=pV,y=tstdata$Y)
+plot(x= tstdata$Y,y= pV, type= "p")
+```
+
+##Linear Regression done using AIC
+```{r echo=F,message=F,warning=F}
+library(MASS)
+regressionAIC <- stepAIC(object = regression,direction = "backward")
+summary(regressionAIC)
+par(mfrow = c(2,2))
+plot(regressionAIC)
+vif(regressionAIC) #as a rule if VIF less than 5 is good, low collinearity
+pVAIC <- predict.lm(object = regressionAIC,newdata = tstdata)
+cor(x=pVAIC,y=tstdata$Y)
+plot(x= tstdata$Y,y= pVAIC, type= "p",col="blue")
+```
+
+##Principle Component Regression
+```{r echo=F,message=F,warning=F}
+library(pls)
+pcrmodel <- pcr(frml,data=trndata,scale = TRUE, validation = "CV")
+summary(pcrmodel)
+par(mfrow = c(1,2))
+predplot(pcrmodel)
+validationplot(pcrmodel,val.type = "R2") #R^2 value close to 1, good fit
+pVPCR <- predict(pcrmodel,ncomp=14,tstdata)
+cor(x=pVPCR,y=tstdata$Y)
+plot(x= tstdata$Y,y= pVPCR, type= "p",col="blue")
+```
+\newline
+R^2 value close to 1, therefore the model is a good fit.
+
+
+##Partial Least Squares
+```{r echo=F,message=F,warning=F}
+library(plsdepot)
+plsregression <- plsreg1(tstdata[,2:15],tstdata[,1,drop=F],comps=3)
+plsregression$R2
+par(mfrow = c(1,2))
+plot(plsregression)
+plot(tstdata$Y, plsregression$y.pred, type = "n", xlab="Original", ylab = "Predicted")
+title("Comparison of responses", cex.main = 0.9)
+abline(a = 0, b = 1, col = "blue", lwd = 2)
+text(tstdata$Y, plsregression$y.pred, col = "#5592e3")
+```
+\newline
+The R^2 values of the model are lower than the other, therefore not the best model.
+
+##Ridge Regression
+```{r echo=F,message=F,warning=F}
+library(MASS)
+ridgered <- lm.ridge(formula = frml,data = trndata,lambda = seq(min(trndata),max(trndata),0.005))
+summary(ridgered)
+matplot(x=t(ridgered$coef),type='l',main="Ridge Regression Lambda vs Coefficient Plot",xlab="Lambda Values",ylab="Coefficients",)
+```
+\newline
+Regression values
+```{r echo = T}
+round(ridgered$coef[, which(ridgered$lambda ==.005)], 2)
+round(ridgered$coef[, which(ridgered$lambda ==0)], 2)
+```
+Since the values are the same, Ridge regression performs as well as ordinary least square method.
+\newline
+Linear regression with variables selected using AIC performs the best with the Ra^2 value = 0.975.
